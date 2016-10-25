@@ -1,7 +1,7 @@
 import org.apache.spark.{SparkConf, SparkContext}
 
-/**
-  * spark-submit  --class WordCount  project1_2.11-1.0.jar  inputBrijesh  outputBrijesh
+/** This program computes word count using spark for local file . It also writes output to local file. 
+  * spark-submit  --class WordCount  <name-of-jar-file>  <input-file>  <output-file-path>
   */
 object WordCount {
 def main (args :Array[String]): Unit ={
