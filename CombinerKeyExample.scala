@@ -1,5 +1,5 @@
-/**
-  * Created by bgautam on 10/27/2016.
+/** This program illustrates usage of method CombineByKey .
+  * spark-submit  --class WordCount  <name-of-jar-file> 
   */
 
 import org.apache.spark.{SparkConf, SparkContext}
