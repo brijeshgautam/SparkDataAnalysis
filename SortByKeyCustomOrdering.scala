@@ -1,7 +1,7 @@
 import org.apache.spark.{SparkConf, SparkContext}
 
-/**
-  * Created by bgautam on 10/27/2016.
+/** This program sorts PairRDD of (Int, Int) using key as string .
+  * spark-submit  --class  SortByKeyCustomOrdering  <name-of-jar-file> 
   */
 object SortByKeyCustomOrdering {
 def main(args :Array[String]): Unit ={
