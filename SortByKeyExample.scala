@@ -1,9 +1,5 @@
 import org.apache.spark.{SparkConf, SparkContext}
 
-/**
-  * Created by bgautam on 11/5/2016.
-  */
-
 case class Sample(str :String, data :Int) extends Ordered[Sample]{
   override def compare(that: Sample): Int = if(str equals(that.str)) data compare(that.data) else str compare(that.str)
   override def toString: String = str + ":"+ data.toString
@@ -25,3 +21,5 @@ object SortByKeyExample {
   }
 
 }
+
+// output is : (abc:5,20) (abc:10,100) (agh:-1,9) (def:1,-100) (ght:-10,56) (ght:-2,67)
