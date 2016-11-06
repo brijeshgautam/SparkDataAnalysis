@@ -42,9 +42,9 @@ val epsilon =  0.0000001
       partitionBy(new HashPartitioner(50)).persist()
 
     val rankValue= computePageRank(graph)
-    rankValue.collect().foreach(println)
-
-    new PrintWriter("pageRankOutput.txt"){write(rankValue.collect().mkString("\n")); close}
+   // rankValue.collect().foreach(println)
+    rankValue.saveAsTextFile("./output")
+    //new PrintWriter("pageRankOutput.txt"){write(rankValue.collect().mkString("\n")); close}
 
   }
 }
