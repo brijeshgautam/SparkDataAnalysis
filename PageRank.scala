@@ -8,9 +8,9 @@ import scala.util.Random
 import org.apache.hadoop.fs.Path
 
 /**
-  * This  program computes  page rank of a nodes in a graph. Input to this program is file which
-  * contains adjacency list representation of the graph.
-  * Input entry in the file is in following format :
+  * This  program computes  page rank of a nodes in a graph. This program generate a random graph and 
+  * writes adjacency list represenation  to a file in hdfs. 
+  * Entries in the file are in following format :
   * 1,6,2,4
   * 9,6,2,1,9
   * Here first entry indicates  source vertex and remaining entries are links of that node.
