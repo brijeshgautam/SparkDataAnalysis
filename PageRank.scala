@@ -19,8 +19,10 @@ object PageRank {
 
     var ranks = graph.mapValues(x => 1.0)
 
-    val contribution =graph.join(ranks).flatMap{case (source ,(links,currRank)) => links.map(dest => (dest, currRank/links.size)) }
-    ranks = contribution.reduceByKey( _ + _).mapValues(x => 0.15 + 0.85 * x)
+   for ( count <- 1 to 100) {
+      val contribution = graph.join(ranks).flatMap { case (source, (links, currRank)) => links.map(dest => (dest, currRank / links.size)) }
+      ranks = contribution.reduceByKey(_ + _).mapValues(x => 0.15 + 0.85 * x)
+    }
     ranks
 
   }
