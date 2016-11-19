@@ -1,12 +1,29 @@
 /**
   * This log is taken from http://ita.ee.lbl.gov/html/contrib/NASA-HTTP.html for month of July.
+  * This project solved the following problems:
+  * 1) Create Schema for  List, display schema and apply select transformation and show the result.
+  * 2) Load NASA HTTP log file, parse log file and create dataframe from it.
+  * 3) Do ETL operation on missing column values.
+  * 4) After ETL is done, parse timestamp ( which is in string format) and convert into actual time datatype.
+  * 5) Persist the Dataframe after step 4.
+  * 6) Compute some statistics about the sizes of content being returned by the web server.
+  * 7) Compute host that appear more than 10 times in the log.
+  * 8) Compute the top ten paths which did not have return code 200.
+  * 9) Compute Unique hosts in the entire log file.
+  * 10) Determine number of Unique hosts in the entire log on a day-by-day basis.
+  * 11) Compute average Number of Daily Requests per Host.
+  * 12) Print out a list up to 40 distinct paths that generate 404 errors.
+  * 13) print out  a list of the top twenty paths that generate the most 404 errors.
+  * 14) Compute the hosts that encountered 404 errors.
+  * 15) Compute 404 Errors per Day Basis.
+  * 
   */
 
 
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql._
-import org.apache.spark.sql.functions.{split, udf}
+import org.apache.spark.sql.functions.{split, udf, dayofmonth}
 import org.apache.spark.sql.functions.regexp_extract
 import org.apache.spark.storage.StorageLevel
 
@@ -109,7 +126,7 @@ class LogAnalysis extends Serializable{
 
   def findTopTenPath(df :DataFrame): Unit ={
     val not200DF = df.filter("Status != 200")
-    
+
     //not200DF.show(10)
     // Sorted DataFrame containing all paths and the number of times they were accessed with non-200 return code
     val logs_sum_df = not200DF.groupBy("Path").count()
@@ -126,18 +143,66 @@ class LogAnalysis extends Serializable{
     println("Unique hosts: " + unique_host_count.toString)
   }
 
-  def findUniqueHostOnDailyBasis(df :DataFrame): Unit ={
+  def findUniqueHostOnDailyBasis(df :DataFrame): DataFrame ={
     val day_to_host_pair_df = df.select(df.col("host"), org.apache.spark.sql.functions.dayofmonth(df.col("time")).alias("day")).cache()
     //day_to_host_pair_df.show()
     val day_group_hosts_df = day_to_host_pair_df.distinct()
     //val day_group_hosts_df = day_to_host_pair_df.distinct()
     val daily_host_unnamed_df= day_group_hosts_df.groupBy("day").count()
     daily_host_unnamed_df.printSchema()
-    val daily_hosts_df = daily_host_unnamed_df.select(daily_host_unnamed_df.col("day") ,daily_host_unnamed_df.col("count").alias("uniqueCount")).cache()
+    val daily_hosts_df = daily_host_unnamed_df.select(daily_host_unnamed_df.col("day") ,daily_host_unnamed_df.col("count").
+      alias("uniqueCount")).cache()
     //select(col("day"),col("count").alias("uniqueCount")).cache()
     daily_hosts_df.show(30, false)
+    daily_hosts_df
   }
-}
+
+  def computeAvgDailyReqPerHost(logsDF:DataFrame,uniqHostDF:DataFrame): DataFrame ={
+    val total_req_per_day_df = (logsDF.select(logsDF.col("host"), org.apache.spark.sql.functions.dayofmonth(logsDF.col("time")).
+      alias("day"))).groupBy("day").count().orderBy("day")
+
+    val joinedDF =total_req_per_day_df.join(uniqHostDF,"day")
+
+    val avg_daily_req_per_host_df = joinedDF.select(joinedDF.col("day"), joinedDF.col("count")/joinedDF.col("uniqueCount")
+     as "avgCount").orderBy(joinedDF.col("day"))cache()
+
+    avg_daily_req_per_host_df
+
+  }
+
+  def compute404Responses(df:DataFrame):DataFrame={
+    df.filter("status = 404").cache()
+  }
+
+  def computeUniquePathFor404(notFoundDF:DataFrame): Unit ={
+    val not_found_paths_df = notFoundDF.select("path")
+    val unique_not_found_paths_df = not_found_paths_df.distinct()
+    unique_not_found_paths_df.show(40, truncate=false)
+  }
+
+
+  def computeTopPathsGenerating404(notFoundDF :DataFrame):DataFrame ={
+    val groupedDF =notFoundDF.groupBy("path").count()
+      groupedDF.orderBy(groupedDF.col("count").desc)
+  }
+  def computeAndShowHostFacing404(notFoundDF: DataFrame): Unit ={
+     val hosts404groupedDF = notFoundDF.groupBy("host").count()
+
+      val hosts_404_count_df =hosts404groupedDF.orderBy(hosts404groupedDF.col("count").desc)
+
+      println("Top 25 hosts that generated errors:" )
+    hosts_404_count_df.show(25, truncate = false
+    )
+  }
+  def computeAndShow404PerDayBasis(notFoundDF:DataFrame): Unit = {
+     val errors_by_date_df = notFoundDF.select(notFoundDF.col("status"),dayofmonth(notFoundDF.col("time")).
+       alias("day")).groupBy("day").count()
+
+    val errors_by_date_sorted_df =errors_by_date_df.orderBy(errors_by_date_df.col("day")).cache()
+     println("404 Errors by day:")
+     errors_by_date_sorted_df.show()
+   }
+  }
 
 
 object LogAnalysis{
@@ -231,8 +296,37 @@ object LogAnalysis{
     // This computation will give us counts of the number of unique daily hosts.
     // We'd like a DataFrame sorted by increasing day of the month which includes the day of
     // the month and the associated number of unique hosts for that day
-    obj.findUniqueHostOnDailyBasis(logsDF)
+    val uniqHostDF =obj.findUniqueHostOnDailyBasis(logsDF)
+    obj.printInfoOfDataFrame(uniqHostDF)
+   //Average Number of Daily Requests per Host
+    //Next, let's determine the average number of requests on a day-by-day basis.
+    // We'd like a list by increasing day of the month and the associated average number of requests per host for that day.
+   val avgDailyReqHostDF =obj.computeAvgDailyReqPerHost(logsDF,uniqHostDF)
+   obj.printInfoOfDataFrame(avgDailyReqHostDF)
 
+    //Counting 404 Response Codes
+    val notFoundDF =obj.compute404Responses(logsDF)
+    println("Found " + notFoundDF.count() + " URLS")
+    obj.printInfoOfDataFrame(notFoundDF)
+
+    //Using notFoundDf, print out a list up to 40 distinct paths that generate 404 errors.
+   obj.computeUniquePathFor404(notFoundDF)
+
+    //Listing the Top Twenty 404 Response Code paths
+    //Using the DataFrame containing only log records with a 404 response code , print out
+    // a list of the top twenty paths that generate the most 404 errors.
+
+    val top_20_not_found_df = obj.computeTopPathsGenerating404(notFoundDF)
+    obj.printInfoOfDataFrame(top_20_not_found_df)
+
+    //Listing the Top Twenty-five 404 Response Code Hosts
+   //let's look at the hosts that encountered 404 errors. Using the DataFrame containing only log records with
+    // a 404 status codes , print out a list of the top twenty-five hosts that generate the most 404 errors.
+   obj.computeAndShowHostFacing404(notFoundDF)
+
+   //Listing 404 Errors per Day
+   //Let's explore the 404 records temporally. Break down the 404 requests by day and get the daily counts sorted by day
+   obj.computeAndShow404PerDayBasis(notFoundDF)
 
   }
 }
