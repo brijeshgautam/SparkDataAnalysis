@@ -1,8 +1,12 @@
 /**
-  * Created by ANIMESH on 06-11-2016.
+  * This  program computes  page rank of a nodes in a graph. Input to this program is file which
+  * contains adjacency list representation of the graph.
+  * Input entry in the file is in following format :
+  * 1,6,2,4
+  * 9,6,2,1,9
+  * Here first entry indicates  source vertex and remaining entries are links of that node.
   */
 
-import java.io.PrintWriter
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
@@ -11,18 +15,10 @@ import scala.collection.mutable
 import scala.util.Random
 import org.apache.hadoop.fs.Path
 
-/**
-  * This  program computes  page rank of a nodes in a graph. Input to this program is file which
-  * contains adjacency list representation of the graph.
-  * Input entry in the file is in following format :
-  * 1,6,2,4
-  * 9,6,2,1,9
-  * Here first entry indicates  source vertex and remaining entries are links of that node.
-  */
 object PageRank {
   val epsilon =  0.0000001
 
-  val conf = new SparkConf().setAppName("page rank").setMaster("local")
+  val conf = new SparkConf().setAppName("page rank")
   val sc = new SparkContext(conf)
 
   def computePageRank(graph :RDD[(Int,Array[Int])]): RDD[(Int,Double)] ={
@@ -86,7 +82,7 @@ object PageRank {
 
     rankValue.saveAsTextFile(outputFile)
 
-    //sc.stop()  
+    //sc.stop()
   }
 }
 
