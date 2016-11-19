@@ -1,3 +1,7 @@
+/**
+  * Created by ANIMESH on 06-11-2016.
+  */
+
 import java.io.PrintWriter
 
 import org.apache.spark.rdd.RDD
@@ -8,15 +12,19 @@ import scala.util.Random
 import org.apache.hadoop.fs.Path
 
 /**
-  * This  program computes  page rank of a nodes in a graph. This program generate a random graph and 
-  * writes adjacency list represenation  to a file in hdfs. 
-  * Entries in the file are in following format :
+  * This  program computes  page rank of a nodes in a graph. Input to this program is file which
+  * contains adjacency list representation of the graph.
+  * Input entry in the file is in following format :
   * 1,6,2,4
   * 9,6,2,1,9
   * Here first entry indicates  source vertex and remaining entries are links of that node.
   */
 object PageRank {
   val epsilon =  0.0000001
+
+  val conf = new SparkConf().setAppName("page rank").setMaster("local")
+  val sc = new SparkContext(conf)
+
   def computePageRank(graph :RDD[(Int,Array[Int])]): RDD[(Int,Double)] ={
     def  computePageRankHelper(currRank:RDD[(Int, Double)], prevRank:RDD[(Int,Double)]):RDD[(Int,Double)] ={
       //  compare  prevRank and current rank value . If there is no change in the value return current rank value
@@ -37,7 +45,7 @@ object PageRank {
     //println(ranks.partitioner) // identify partitioner for ranks
     computePageRankHelper(rank, prevRank )
   }
-  def generateGraph(sc :SparkContext, graphFile :String): Unit ={
+  def generateGraph( graphFile :String): Unit ={
 
     val total = 50
     val graph = new mutable.HashMap[Int,Set[Int]]()
@@ -47,30 +55,38 @@ object PageRank {
       val dest = r.nextInt(total +1)
       graph(source) = graph.getOrElse(source, Set()) + dest
     }
-    val hconf =sc.hadoopConfiguration
-    val fs = org.apache.hadoop.fs.FileSystem.get(hconf)
-    if (fs.exists(new Path(graphFile)))
-      fs.delete(new Path(graphFile), true)
+
 
     val graphRDD = sc.parallelize(graph.mapValues(_.mkString(",")).map((key) => key._1.toString + "," + key._2).toSeq)
     graphRDD.saveAsTextFile(graphFile)
 
   }
 
+  def deleteHDFSFile(file1:String, file2:String){
+    val hconf =sc.hadoopConfiguration
+    val fs = org.apache.hadoop.fs.FileSystem.get(hconf)
+    if (fs.exists(new Path(file1)))
+      fs.delete(new Path(file1), true)
+
+    if (fs.exists(new Path(file2)))
+      fs.delete(new Path(file2), true)
+  }
   def main (args :Array[String]): Unit ={
 
-    val conf = new SparkConf().setAppName("page rank").setMaster("local")
-    val sc = new SparkContext(conf)
+
     val graphFile ="/user/inputGraph"
-    generateGraph(sc,graphFile)
+    val outputFile ="/user/outputRank"
+    deleteHDFSFile(graphFile, outputFile)
+    generateGraph(graphFile)
     val graph = sc.textFile("hdfs:///"+ graphFile).map(x => x.split(",").
       map(_.toInt)).map(x => (x(0),x.drop(1))).
       partitionBy(new HashPartitioner(50)).persist()
 
     val rankValue= computePageRank(graph)
 
-    rankValue.saveAsTextFile("hdfs:///user/root/output")
-    
+    rankValue.saveAsTextFile(outputFile)
+
+    //sc.stop()  
   }
 }
 
