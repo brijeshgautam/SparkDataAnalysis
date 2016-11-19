@@ -16,7 +16,7 @@
   * 13) print out  a list of the top twenty paths that generate the most 404 errors.
   * 14) Compute the hosts that encountered 404 errors.
   * 15) Compute 404 Errors per Day Basis.
-  * 
+  *
   */
 
 
@@ -29,7 +29,8 @@ import org.apache.spark.storage.StorageLevel
 
 class LogAnalysis extends Serializable{
 
-  val spark = SparkSession.builder().master("local").appName("Spark Session for Log Analysis").getOrCreate()
+  //val spark = SparkSession.builder().master("local").appName("Spark Session for Log Analysis").getOrCreate()
+  val spark = SparkSession.builder().appName("Spark Session for Log Analysis").getOrCreate()
 
   def createDFForUserDefinedList(): DataFrame ={
     val list =List(Seq("Anthony", 10), Seq("Julia", 20), Seq("Fred", 5))
