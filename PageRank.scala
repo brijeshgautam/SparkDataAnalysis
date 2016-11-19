@@ -5,6 +5,8 @@
   * 1,6,2,4
   * 9,6,2,1,9
   * Here first entry indicates  source vertex and remaining entries are links of that node.
+  * Used  following command for  using spark standalone master and cluster deployment mode.
+  *  spark-submit  --master spark://35.154.35.9:7077  --class  PageRank  spark2-11_2.11-1.0.jar  --deploy-mode  cluster
   */
 
 
