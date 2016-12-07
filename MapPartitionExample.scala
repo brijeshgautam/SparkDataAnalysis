@@ -1,15 +1,15 @@
 import org.apache.spark.{SparkConf, SparkContext}
 import  org.apache.spark.rdd.RDD
 /**
-  * This program computes  average  of list of integer using mapPartition.
+  * This program computes  average  of list of integer using mapPartition.This program also compute size of each partition.
   */
 object MapPartitionExample {
 
   def partitionCtr(iterator: Iterator[Int]) ={
     var sumCount = (0,0)
-     for (x  <- iterator){
-       sumCount=  (sumCount._1 + x , sumCount._2 + 1)
-     }
+    for (x  <- iterator){
+      sumCount=  (sumCount._1 + x , sumCount._2 + 1)
+    }
     List(sumCount).iterator
   }
   def combineCtr(tuple1 :(Int,Int),tuple2 :(Int,Int) )={
@@ -28,5 +28,8 @@ object MapPartitionExample {
 
     val listRdd= sc.parallelize(list, 10)
     println(fastAvg(listRdd))
+    // find out number of element in each Partition
+    println("printing out size of each partition")
+    listRdd.mapPartitions(iter => Array(iter.size).iterator).collect().foreach(println)
   }
 }
